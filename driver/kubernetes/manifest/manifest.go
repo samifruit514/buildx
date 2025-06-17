@@ -32,6 +32,7 @@ type DeploymentOpt struct {
 	// files mounted at /etc/buildkitd
 	ConfigFiles map[string][]byte
 
+	BuildKitRootFolderMemory string
 	Rootless                 bool
 	NodeSelector             map[string]string
 	CustomAnnotations        map[string]string
@@ -50,6 +51,7 @@ const (
 	containerName      = "buildkitd"
 	AnnotationPlatform = "buildx.docker.com/platform"
 	LabelApp           = "app"
+	memoryVolumeName   = "buildkit-memory"
 )
 
 type ErrReservedAnnotationPlatform struct{}
@@ -245,6 +247,26 @@ func NewDeployment(opt *DeploymentOpt) (d *appsv1.Deployment, c []*corev1.Config
 			return nil, nil, err
 		}
 		d.Spec.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceEphemeralStorage] = limEphemeralStorage
+	}
+
+	if opt.BuildKitRootFolderMemory != "" {
+		buildKitRootFolderMemory, err := resource.ParseQuantity(opt.BuildKitRootFolderMemory)
+		if err != nil {
+			return nil, nil, err
+		}
+		d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: "buildkit-memory",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium:    "Memory",
+					SizeLimit: &buildKitRootFolderMemory,
+				},
+			},
+		})
+		d.Spec.Template.Spec.Containers[0].VolumeMounts = append(d.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      "buildkit-memory",
+			MountPath: "/var/lib/buildkit",
+		})
 	}
 
 	return

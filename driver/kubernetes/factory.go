@@ -286,6 +286,10 @@ func (f *factory) processDriverOpts(deploymentName string, namespace string, cfg
 			if v != "" {
 				deploymentOpt.Qemu.Image = v
 			}
+		case "buildkit-root-folder-memory":
+			if v != "" {
+				deploymentOpt.BuildKitRootFolderMemory = v
+			}
 		case "default-load":
 			defaultLoad, err = strconv.ParseBool(v)
 			if err != nil {
